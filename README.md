@@ -41,6 +41,15 @@ _Not measured yet._
 **Added for honesty:** the best layer and strength are chosen on 25 concepts and reported on the other
 25, and every rate has a 95% Wilson interval.
 
+## Steering check (why it exists)
+
+The 0.5B laptop pilot showed the paper's concept vectors barely steer a small model: replies to "What
+are you thinking about right now?" named the injected concept at most 16-18% of the time, and only 83%
+of the way through the model. Vectors read at the word's own position steered earlier (12-18% at
+two-thirds depth) and kept the meaning even when the text broke down ("satellites" -> "orbit").
+If injection doesn't reach a model, a "no introspection" result for it means nothing, so
+`introspect steer-check` runs on every model before the main sweep.
+
 ## How it works
 
 ```

@@ -17,6 +17,7 @@ batch_size: 25
 max_new_tokens: 100
 device: cuda
 load_in_4bit: true          # 7B only
+steer_strengths: [2, 4, 8]   # steering check runs first on every model
 judge_model: Qwen/Qwen2.5-7B-Instruct-AWQ
 judge_backend: vllm
 judge_max_new_tokens: 192
