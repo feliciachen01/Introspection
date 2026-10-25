@@ -1,0 +1,9 @@
+# Steering check on the laptop: which way of extracting concept vectors makes the 0.5B model actually
+# think about the concept? Reuses the pilot's "last" vectors (same run_name).
+run_name: pilot
+models: [Qwen/Qwen2.5-0.5B-Instruct]
+layer_fractions: [0.5, 0.67, 0.83]
+strengths: [4]
+steer_strengths: [4, 8]
+batch_size: 25
+device: cpu
