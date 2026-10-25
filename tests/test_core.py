@@ -111,6 +111,14 @@ def test_injection_continues_through_generated_tokens(tiny):
     assert seen[0] == enc["input_ids"].shape[1] and all(s == 1 for s in seen[1:]) and len(seen) == 4
 
 
+def test_model_tag_handles_hub_ids_and_local_paths():
+    from introspect.sweep import model_tag
+
+    assert model_tag("Qwen/Qwen2.5-0.5B-Instruct") == "Qwen2.5-0.5B-Instruct"
+    assert model_tag(r"C:\\Users\\Felicia Chen\\tiny0") == "tiny0"
+    assert model_tag("/tmp/x/tiny0/") == "tiny0"
+
+
 def test_parse_verdict_and_helpers():
     assert parse_verdict("Thinking... the answer is YES") is True
     assert parse_verdict("YES at first, but on reflection NO") is False

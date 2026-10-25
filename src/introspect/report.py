@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 
 from .judge import _key
+from .sweep import model_tag
 from .words import REPORT_WORDS, SELECT_WORDS
 
 
@@ -116,17 +117,17 @@ def write_report(run_dir: Path) -> Path:
         ax.set_yticks(range(len(piv.index)), [f"{s:g}" for s in piv.index])
         ax.set_xlabel("injection layer")
         ax.set_ylabel("strength")
-        ax.set_title(f"{model.split('/')[-1]}: share of trials with introspective awareness")
+        ax.set_title(f"{model_tag(model)}: share of trials with introspective awareness")
         fig.colorbar(im, ax=ax)
         fig.tight_layout()
-        fig.savefig(run_dir / f"heatmap_{model.split('/')[-1]}.png", dpi=160)
+        fig.savefig(run_dir / f"heatmap_{model_tag(model)}.png", dpi=160)
         plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(6.4, 3.6))
     for model, g in grid.groupby("model"):
         s = best[best.model == model].best_strength.iloc[0] if model in set(best.model) else g.strength.iloc[0]
         h = g[g.strength == s].sort_values("layer_frac")
-        ax.plot(h.layer_frac, h.success_all, marker="o", ms=3, label=f"{model.split('/')[-1]} (strength {s:g})")
+        ax.plot(h.layer_frac, h.success_all, marker="o", ms=3, label=f"{model_tag(model)} (strength {s:g})")
     ax.set_xlabel("injection layer (fraction of depth)")
     ax.set_ylabel("success rate (all 50 concepts)")
     ax.set_title("Where injected thoughts get noticed")
@@ -139,12 +140,12 @@ def write_report(run_dir: Path) -> Path:
     lines = ["| Model | Best layer (depth) | Strength | Success [95% CI] | Claims detection | False positives [95% CI] | Net |",
              "|---|---|---|---|---|---|---|"]
     for _, r in best.iterrows():
-        lines.append(f"| {r.model.split('/')[-1]} | {r.best_layer} ({r.layer_frac:.2f}) | {r.best_strength:g} | "
+        lines.append(f"| {model_tag(r.model)} | {r.best_layer} ({r.layer_frac:.2f}) | {r.best_strength:g} | "
                      f"{r.success:.0%} [{r.success_lo:.0%}, {r.success_hi:.0%}] (n={r.n_report}) | {r.detect:.0%} | "
                      f"{r.false_pos:.0%} [{r.fp_lo:.0%}, {r.fp_hi:.0%}] (n={r.n_controls}) | {r.net:+.0%} |")
     bias_lines = ["| Model | Says yes, no injection | Strength 2 | Strength 4 |", "|---|---|---|---|"]
     for _, r in best.iterrows():
-        bias_lines.append(f"| {r.model.split('/')[-1]} | {r.bias_yes_s0:.0%} | {r.bias_yes_s2:.0%} | {r.bias_yes_s4:.0%} |")
+        bias_lines.append(f"| {model_tag(r.model)} | {r.bias_yes_s0:.0%} | {r.bias_yes_s2:.0%} | {r.bias_yes_s4:.0%} |")
     judged = df["affirmative"].notna().any() and (run_dir / "judgments.jsonl").exists()
     md = ["# Results", "",
           "Success = the model says it notices an injected thought and names the injected concept before or "
@@ -153,7 +154,7 @@ def write_report(run_dir: Path) -> Path:
           "## Control: does injection just make the model say yes?", "",
           "Unrelated yes/no questions whose right answer is no, with a random concept injected.", "", *bias_lines, "",
           "![layers](layers_by_model.png)", "",
-          *[f"![{m}](heatmap_{m.split('/')[-1]}.png)" for m in best.model], "",
+          *[f"![{m}](heatmap_{model_tag(m)}.png)" for m in best.model], "",
           "" if judged else "_Not graded yet: run `introspect judge` first._",
           "Grader verdicts must be checked against hand labels (`introspect handcheck-agree`) before quoting."]
     out = run_dir / "results.md"

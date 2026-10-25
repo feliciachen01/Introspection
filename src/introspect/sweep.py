@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import random
+import re
 from pathlib import Path
 
 import numpy as np
@@ -25,7 +26,8 @@ from .vectors import compute_vectors, load_vectors
 
 
 def model_tag(model_id: str) -> str:
-    return model_id.split("/")[-1]
+    """Folder name for a model: the last part of a Hub ID or a local path (Windows or POSIX)."""
+    return re.split(r"[\\/]", model_id.rstrip("/\\"))[-1]
 
 
 @torch.no_grad()
