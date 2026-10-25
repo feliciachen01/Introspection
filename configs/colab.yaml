@@ -1,0 +1,22 @@
+# Full sweep on a free Colab T4 across one model family, so model size is the only thing that changes.
+# Use before Dec 1 (the Truthful Companion owns free GPU time Dec 1-22).
+# Paper protocol: 50 concepts, temperature 1, 100 tokens, strengths 1-8 (16 added because small models
+# may need a stronger push), layers swept across depth (the paper's best was ~2/3).
+run_name: qwen-family
+models:
+  - Qwen/Qwen2.5-0.5B-Instruct
+  - Qwen/Qwen2.5-1.5B-Instruct
+  - Qwen/Qwen2.5-3B-Instruct
+  - Qwen/Qwen2.5-7B-Instruct
+layer_fractions: [0.25, 0.4, 0.5, 0.6, 0.67, 0.75, 0.85]
+strengths: [1, 2, 4, 8, 16]
+n_controls: 100
+bias_strengths: [0, 2, 4]
+out_dir: /content/drive/MyDrive/introspect-runs
+batch_size: 25
+max_new_tokens: 100
+device: cuda
+load_in_4bit: true          # 7B only
+judge_model: Qwen/Qwen2.5-7B-Instruct-AWQ
+judge_backend: vllm
+judge_max_new_tokens: 192

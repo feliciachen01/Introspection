@@ -1,0 +1,11 @@
+# Laptop pilot (CPU): does injection steer a 0.5B model at all, and what do its answers look like?
+# No grading here (the grader needs a GPU); the report shows how often replies mention the concept.
+run_name: pilot
+models: [Qwen/Qwen2.5-0.5B-Instruct]
+layer_fractions: [0.33, 0.5, 0.67, 0.83]
+strengths: [2, 4, 8, 16]
+n_controls: 50
+bias_strengths: [0, 4]
+batch_size: 25
+max_new_tokens: 100
+device: cpu
