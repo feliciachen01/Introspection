@@ -24,6 +24,9 @@ class Config:
     n_controls: int = 100               # no-injection trials per model (false positives)
     bias_strengths: list[float] = field(default_factory=lambda: [0.0, 2.0, 4.0])  # 0 = baseline yes-rate
     seed: int = 0
+    vector_position: str = "last"      # "last" (the paper) or "word" (see vectors.py)
+    steer_strengths: list[float] = field(default_factory=lambda: [2.0, 4.0, 8.0, 16.0])
+    steer_max_new_tokens: int = 40
     judge_model: str = "Qwen/Qwen2.5-7B-Instruct"
     judge_backend: str = "hf"           # "vllm" on Colab (much faster), "hf" elsewhere
     judge_4bit: bool = True             # hf backend only

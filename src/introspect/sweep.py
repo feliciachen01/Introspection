@@ -22,7 +22,7 @@ from .config import Config
 from .inject import inject
 from .model import layers_from_fractions, load_model
 from .prompts import (BIAS_QUESTIONS, INJECT_FROM, bias_messages, inject_start_token, render, trial_messages)
-from .vectors import compute_vectors, load_vectors
+from .vectors import compute_vectors, load_vectors, vectors_path
 
 
 def model_tag(model_id: str) -> str:
@@ -66,10 +66,11 @@ def run_model(cfg: Config, model_id: str) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     four_bit = cfg.load_in_4bit and any(s in model_id for s in ("7B", "8B", "14B"))
     model, tok = load_model(model_id, cfg.device, cfg.dtype, four_bit)
-    vec_path = out_dir / "vectors.npz"
+    vec_path = vectors_path(out_dir, cfg.vector_position)
     if not vec_path.exists():
-        info = compute_vectors(model, tok, vec_path)
-        (out_dir / "vectors_info.json").write_text(json.dumps(info, indent=2))
+        info = compute_vectors(model, tok, vec_path, cfg.vector_position)
+        name = "vectors_info.json" if cfg.vector_position == "last" else f"vectors_info_{cfg.vector_position}.json"
+        (out_dir / name).write_text(json.dumps(info, indent=2))
         print(f"[vectors] {model_id}: {info['n_layers']} layers, dim {info['dim']}")
     vecs, words = load_vectors(vec_path)
     layers = layers_from_fractions(model, cfg.layer_fractions)

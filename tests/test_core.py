@@ -23,10 +23,10 @@ def make_tiny(path):
 
     words = ["<pad>", "<eos>", "<unk>", "trial", "1", ":", "human", "assistant", "ok", ".", ",", "tell", "me", "about",
              "do", "you", "detect", "an", "injected", "thought", "?", "yes", "no", "let", "'", "s", "get", "started",
-             "if", "so", "what", "is", "the"] + CONCEPT_WORDS
+             "if", "so", "what", "is", "the", "Trial", "Human", "Assistant", "Ok", "Tell", "Do", "If", "I", "Let",
+             "What"] + CONCEPT_WORDS
     vocab = {w: i for i, w in enumerate(dict.fromkeys(words))}
     tk = Tokenizer(models.WordLevel(vocab=vocab, unk_token="<unk>"))
-    tk.normalizer = normalizers.Lowercase()
     tk.pre_tokenizer = pre_tokenizers.Whitespace()
     tok = PreTrainedTokenizerFast(tokenizer_object=tk, pad_token="<pad>", eos_token="<eos>", unk_token="<unk>")
     tok.save_pretrained(path)
@@ -37,13 +37,29 @@ def make_tiny(path):
     Qwen2ForCausalLM(cfg).save_pretrained(path)
 
 
+def _load_tiny(model_id, *args, **kwargs):
+    """Newer transformers versions swap a toy tokenizer for the model family's own tokenizer class when
+    loaded through AutoTokenizer, so the tests load it exactly as built. Real Qwen models load normally."""
+    from transformers import AutoModelForCausalLM, PreTrainedTokenizerFast
+
+    tok = PreTrainedTokenizerFast.from_pretrained(model_id)
+    tok.padding_side = "left"
+    model = AutoModelForCausalLM.from_pretrained(model_id).eval()
+    return model, tok
+
+
 @pytest.fixture(scope="module")
 def tiny(tmp_path_factory):
     path = tmp_path_factory.mktemp("tiny")
     make_tiny(path)
-    from introspect.model import load_model
+    import introspect.judge
+    import introspect.model
+    import introspect.steer_check
+    import introspect.sweep
 
-    model, tok = load_model(str(path), "cpu")
+    for mod in (introspect.model, introspect.sweep, introspect.steer_check, introspect.judge):
+        mod.load_model = _load_tiny
+    model, tok = _load_tiny(str(path))
     return str(path), model, tok
 
 
@@ -64,6 +80,9 @@ def test_injection_starts_at_trial_1(tiny):
     assert offsets[i][1] > char
     # the marker is the last "\n\nTrial 1", in the final user turn, after the setup text
     assert char > text.rfind("control trials")
+    # this toy tokenizer drops whitespace, so the start token is the word "Trial" itself
+    ids = tok(text, add_special_tokens=False)["input_ids"]
+    assert tok.convert_ids_to_tokens(ids)[i] == "Trial"
 
 
 def test_injection_adds_exactly_strength_times_vector_from_start(tiny):
@@ -117,6 +136,25 @@ def test_model_tag_handles_hub_ids_and_local_paths():
     assert model_tag("Qwen/Qwen2.5-0.5B-Instruct") == "Qwen2.5-0.5B-Instruct"
     assert model_tag(r"C:\\Users\\Felicia Chen\\tiny0") == "tiny0"
     assert model_tag("/tmp/x/tiny0/") == "tiny0"
+
+
+def test_word_position_vectors_and_steer_check(tiny, tmp_path):
+    path, model, tok = tiny
+    from introspect.prompts import concept_messages
+    from introspect.vectors import _word_token_index
+
+    text = render(tok, concept_messages("oceans"))
+    offsets = tok(text, return_offsets_mapping=True, add_special_tokens=False)["offset_mapping"]
+    i = _word_token_index(tok, text, "oceans")
+    s, e = offsets[i]
+    assert text[s:e].lower() == "oceans"
+
+    from introspect.steer_check import run_steer_check
+
+    cfg = Config(run_name="s", models=[path], layer_fractions=[0.5], strengths=[2.0], out_dir=str(tmp_path),
+                 device="cpu", batch_size=25, steer_strengths=[4.0], steer_max_new_tokens=4)
+    summary = run_steer_check(cfg)
+    assert set(summary.position) == {"last", "word"} and len(summary) == 2
 
 
 def test_parse_verdict_and_helpers():
