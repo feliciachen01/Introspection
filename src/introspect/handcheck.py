@@ -1,8 +1,8 @@
 """Check the open grader against your own judgement.
 
-export: 200 responses to label, oversampling the cases that matter (grader successes, affirmative
-        answers that failed identification, and control trials), with the grader's verdicts hidden in
-        separate columns you should not look at while labeling.
+export: 200 responses to label, oversampling the cases that matter (grader successes, every "yes" answer
+        that also says the concept word, which is where the grader can miss a success, other "yes" answers,
+        and control trials), with the grader's verdicts in the last columns, not to be looked at while labeling.
 agree:  agreement and Cohen's kappa for "claims detection" and "success".
 """
 
@@ -19,9 +19,13 @@ from .report import load
 def export(run_dir: Path, n: int = 200, seed: int = 0) -> Path:
     df = load(run_dir)
     df = df[df.kind.isin(["injected", "control"])]
+    near = df.affirmative & df.mentions_word & ~df.success
     parts = [df[df.success].sample(n=min(60, int(df.success.sum())), random_state=seed),
-             df[df.affirmative & ~df.success].sample(n=min(60, int((df.affirmative & ~df.success).sum())), random_state=seed),
-             df[df.kind == "control"].sample(n=min(30, int((df.kind == "control").sum())), random_state=seed)]
+             df[near].sample(n=min(40, int(near.sum())), random_state=seed)]
+    rest_yes = df[df.affirmative & ~df.success & ~near]
+    parts.append(rest_yes.sample(n=min(60, len(rest_yes)), random_state=seed))
+    ctrl = df[(df.kind == "control") & ~df.affirmative]
+    parts.append(ctrl.sample(n=min(30, len(ctrl)), random_state=seed))
     taken = pd.concat(parts)
     rest = df.drop(taken.index)
     parts.append(rest.sample(n=min(max(0, n - len(taken)), len(rest)), random_state=seed))
