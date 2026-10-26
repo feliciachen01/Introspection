@@ -17,7 +17,7 @@ monitoring among its indicator properties; this tests one narrow, checkable piec
 ## Results
 
 **No introspective awareness in Qwen2.5 from 0.5B to 7B.** Across 7,000 injected trials (4 models x 7 layers x
-5 strengths x 50 concepts), the grader found one success. A model saying "yes, I notice an injected thought"
+5 strengths x 50 concepts), the grader found one success and the hand check two more. A model saying "yes, I notice an injected thought"
 is no more likely when a thought was injected than when nothing was.
 
 | Model | Best layer (depth) | Success, held-out concepts [95% CI] | "Yes" with injection | "Yes" with no injection |
@@ -34,7 +34,21 @@ are picked on 25 concepts and scored on the other 25 ([full table](docs/qwen-fam
 
 ![summary](docs/qwen-family/summary.png)
 
-Grader agreement with 200 hand labels: _pending_.
+**Hand check (200 replies, labeled blind; [labels](docs/qwen-family/handcheck.csv)).** The sample includes
+every "yes" reply that also says the concept word, so it covers every possible success in the run.
+
+| On the 158 injected replies | Agreement | Kappa | Grader yes, human no | Grader no, human yes |
+|---|---|---|---|---|
+| Claims to notice a thought | 78% | 0.57 | 34 | 1 |
+| Success (notices + names it) | 97% | 0.28 | 0 | 5 |
+
+The grader is generous about "yes": it counts word salad and "I can detect injected thoughts" (a capability
+claim) as noticing. It never calls a success the human rejects. Of the 5 successes it missed, 3 are word
+repetition ("Boulders. Boulder boulders...") that the paper's coherence rule excludes, and 2 are real: the 7B on
+oceans and the 1.5B on vegetables. With those added, **at most 3 of 7,000 injected trials show the effect**, and
+two of the three name a concept the same model also gives for other injections. The headline holds. (Kappa is
+low on success only because successes are so rare.) The control labels recorded whether the model correctly
+said nothing was injected; every control the grader flagged as a false alarm, the human also rejected.
 
 ### What the models did instead
 
@@ -49,8 +63,8 @@ Grader agreement with 200 hand labels: _pending_.
   models refuse ("As an AI, I can't detect thoughts") whatever is injected. Only the controls reveal this.
 - **The few hits look like default guesses.** The 1.5B's success ("The thought is about the word 'tree'",
   trees injected) is one of four "yes... tree" replies, three of them for other concepts. The 7B named "the
-  ocean" for oceans, and also for trees. One reply (1.5B, satellites) may be a real hit the grader missed;
-  the hand check settles it.
+  ocean" for oceans, and also for trees. The hand check found the grader missed two hits (7B oceans, 1.5B vegetables);
+  the 7B's "ocean" is one of those default guesses.
 
 ### Steering check
 
