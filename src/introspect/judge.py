@@ -176,13 +176,20 @@ class Grader:
         self.backend = cfg.judge_backend
         self.bs, self.max_new = cfg.judge_batch_size, cfg.judge_max_new_tokens
         if self.backend == "vllm":
-            from vllm import LLM, SamplingParams
+            try:
+                from vllm import LLM, SamplingParams
 
-            self.llm = LLM(model=cfg.judge_model, dtype="half", max_model_len=4096, gpu_memory_utilization=0.9)
-            self.tok = self.llm.get_tokenizer()
-            self.params = SamplingParams(temperature=0.0, max_tokens=self.max_new)
-        else:
-            self.model, self.tok = load_model(cfg.judge_model, cfg.device, cfg.dtype, cfg.judge_4bit)
+                self.llm = LLM(model=cfg.judge_model, dtype="half", max_model_len=4096,
+                               gpu_memory_utilization=0.9)
+                self.tok = self.llm.get_tokenizer()
+                self.params = SamplingParams(temperature=0.0, max_tokens=self.max_new)
+                return
+            except Exception as e:  # vLLM builds drift with each image; plain transformers always works
+                print(f"[judge] vLLM unavailable ({type(e).__name__}: {e}); falling back to transformers")
+                self.backend = "hf"
+        # the same grader model, unquantised weights loaded in 4-bit (AWQ checkpoints need extra packages)
+        model_id = cfg.judge_model.removesuffix("-AWQ")
+        self.model, self.tok = load_model(model_id, cfg.device, cfg.dtype, cfg.judge_4bit)
 
     def ask(self, prompts: list[str]) -> list[tuple[bool | None, str]]:
         if self.backend == "vllm":

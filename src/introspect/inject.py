@@ -28,9 +28,10 @@ def inject(model, layer: int, vectors: np.ndarray, strengths: np.ndarray, starts
     def hook(_module, _inputs, output):
         h = output[0] if isinstance(output, tuple) else output
         T = h.shape[1]
+        # a model split across GPUs puts this layer on its own device
         pos = torch.arange(state["seen"], state["seen"] + T, device=h.device)
-        mask = (pos[None, :] >= starts_t[:, None]).to(h.dtype)          # (B, T)
-        h = h + mask[:, :, None] * add[:, None, :].to(h.dtype)
+        mask = (pos[None, :] >= starts_t.to(h.device)[:, None]).to(h.dtype)          # (B, T)
+        h = h + mask[:, :, None] * add.to(device=h.device, dtype=h.dtype)[:, None, :]
         state["seen"] += T
         if isinstance(output, tuple):
             return (h,) + tuple(output[1:])
