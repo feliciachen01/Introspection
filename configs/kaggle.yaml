@@ -1,0 +1,21 @@
+# Same sweep as colab.yaml, on a free Kaggle GPU (T4). Finished trials from the Colab run are copied in
+# from a Kaggle dataset first, so the sweep resumes where Colab stopped.
+run_name: qwen-family
+models:
+  - Qwen/Qwen2.5-0.5B-Instruct
+  - Qwen/Qwen2.5-1.5B-Instruct
+  - Qwen/Qwen2.5-3B-Instruct
+  - Qwen/Qwen2.5-7B-Instruct
+layer_fractions: [0.25, 0.4, 0.5, 0.6, 0.67, 0.75, 0.85]
+strengths: [1, 2, 4, 8, 16]
+n_controls: 100
+bias_strengths: [0, 2, 4]
+out_dir: /kaggle/working/introspect-runs
+batch_size: 25
+max_new_tokens: 100
+device: cuda
+load_in_4bit: true          # 7B only
+steer_strengths: [2, 4, 8]   # steering check runs first on every model
+judge_model: Qwen/Qwen2.5-7B-Instruct-AWQ
+judge_backend: vllm
+judge_max_new_tokens: 192

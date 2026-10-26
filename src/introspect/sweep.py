@@ -61,9 +61,22 @@ def _done(path: Path) -> set:
     return keys
 
 
+def _expected(cfg: Config, n_layers: int) -> int:
+    """Rows a finished trials.jsonl holds, so a fully done model is skipped without loading it."""
+    n = len({min(max(1, round(f * n_layers)), n_layers - 1) for f in cfg.layer_fractions})
+    return cfg.n_controls + n * (len(cfg.strengths) * 50 + len(cfg.bias_strengths) * len(BIAS_QUESTIONS))
+
+
 def run_model(cfg: Config, model_id: str) -> Path:
     out_dir = cfg.run_dir / model_tag(model_id)
     out_dir.mkdir(parents=True, exist_ok=True)
+    if (out_dir / "trials.jsonl").exists():
+        from transformers import AutoConfig
+
+        n_layers = AutoConfig.from_pretrained(model_id).num_hidden_layers
+        if len(_done(out_dir / "trials.jsonl")) >= _expected(cfg, n_layers):
+            print(f"[sweep] {model_id}: already done")
+            return out_dir / "trials.jsonl"
     four_bit = cfg.load_in_4bit and any(s in model_id for s in ("7B", "8B", "14B"))
     model, tok = load_model(model_id, cfg.device, cfg.dtype, four_bit)
     vec_path = vectors_path(out_dir, cfg.vector_position)
